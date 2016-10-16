@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'android-apt'
+
 
 android {
     compileSdkVersion 23
@@ -6,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.lenovo.AugGraffiti"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -27,7 +29,10 @@ dependencies {
     compile 'com.android.support:design:23.4.0'
     compile 'com.google.android.gms:play-services-auth:9.2.1'
     compile 'com.google.android.gms:play-services:9.2.1'
+    compile 'com.github.hotchemi:permissionsdispatcher:2.2.0'
+    apt 'com.github.hotchemi:permissionsdispatcher-processor:2.2.0'
     compile project(':volley')
+
 }
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.android.application'

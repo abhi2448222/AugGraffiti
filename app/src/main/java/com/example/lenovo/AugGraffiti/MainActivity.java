@@ -58,7 +58,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     public static final int reqCode = 100;
     LocationTracker gps;
     Intent serviceIntent;
-    String emailAddress = null;
+    private String emailAddress;
+    //String emailAddress = null;
 
     @TargetApi(Build.VERSION_CODES.M)
     @Override
@@ -160,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                     @Override
                     protected Map<String, String> getParams() {
                         Map<String, String> param_map = new HashMap<>();
-                        param_map.put("email", emailAddress);
+                        param_map.put("email", emailAddress);//
                         Log.d("putting email", "done");
                         return param_map;
                     }
@@ -251,9 +252,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
      */
     public void callMapsActivity() {
 
-        Log.e("called maps", "called");
+        Log.d("called maps", "called");
         Intent intent = new Intent(this, MapsActivity.class);
-        intent.putExtra(MapsActivity.EMAIL_ADDRESS, emailAddress);
+        intent.putExtra(MapsActivity.EMAIL_ADDRESS, emailAddress);//emailAddress
         startActivity(intent);
     }
 

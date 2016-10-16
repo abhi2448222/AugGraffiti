@@ -91,6 +91,9 @@ public class ImageRequest extends Request<Bitmap> {
         this(url, listener, maxWidth, maxHeight,
                 ScaleType.CENTER_INSIDE, decodeConfig, errorListener);
     }
+
+
+
     @Override
     public Priority getPriority() {
         return Priority.LOW;

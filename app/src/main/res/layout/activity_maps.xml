@@ -39,7 +39,8 @@
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
-            android:text="Gallery" />
+            android:text="Gallery"
+            android:onClick="getGallery"/>
 
 
     </RelativeLayout>

@@ -1,22 +1,68 @@
 package com.example.lenovo.AugGraffiti;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.SurfaceTexture;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.StreamConfigurationMap;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.Surface;
+import android.view.SurfaceView;
+import android.view.TextureView;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.AbsoluteLayout;
+import android.widget.Button;
+import android.widget.Toast;
+import static android.hardware.SensorManager.getAltitude;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+
+
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
-
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
-
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -34,9 +80,14 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.Manifest;
+
+import permissions.dispatcher.NeedsPermission;
+import permissions.dispatcher.RuntimePermissions;
 
 /*
 This Activity loads the GoogleMapScreen and places a P-Tag on user's current location.
@@ -44,7 +95,9 @@ And also, monitors the change in User's location and updates the P-tag. It also 
 the near tags if available from the Web_API and displays it as C-tag on the map screen.
 It also implements Sign-out and Get-score functionalities
  */
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationChangeListener {
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationChangeListener, GoogleMap.OnMarkerClickListener {
+    private static final int REQUEST_CAMERA_PERMISSION = 200;
     public static final String EMAIL_ADDRESS = "userEmailId";
     String userEmailID = null;
     GoogleApiClient gac;
@@ -54,6 +107,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LatLng currentLocation;
     WebApiServer web;
     MarkerOptions currentLocMarker;
+    double altitude=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,16 +166,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-
     /*
     When the Map is ready, set mMap and call showMapCursor for
     displaying P and C tags
@@ -142,12 +186,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (gps.canGetLocation()) {
             double latitude = gps.getLatitude();
             double longitude = gps.getLongitude();
+            altitude= gps.getAltitude();
+
             Log.d("Got Loc lat in maps", String.valueOf(latitude));
             Log.d("Got LOC long in maps", String.valueOf(longitude));
             currentLocation = new LatLng(latitude, longitude);
 
             //Spoofing the current location to COOR HALL's coordinates
-            //currentLocation=new LatLng(Double.parseDouble("33.4195"),Double.parseDouble("-111.939108"));
+           // currentLocation=new LatLng(Double.parseDouble("33.4195"),Double.parseDouble("-111.939108"));
 
             Log.d("Add current loc", "curr");
 
@@ -155,9 +201,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Bitmap smallCurrentMarker = cropImage(75, 75, R.drawable.download);
 
             //Add the P tag on the map and zoom the cameraView , so that the Tag is visible
-            currentLocMarker = new MarkerOptions().position(currentLocation).title("here").draggable(true).icon(BitmapDescriptorFactory.fromBitmap(smallCurrentMarker));
+            currentLocMarker = new MarkerOptions().position(currentLocation).title("CurrentLoc").draggable(true).icon(BitmapDescriptorFactory.fromBitmap(smallCurrentMarker));
             mMap.addMarker(currentLocMarker);
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 18));
+
 
         } else {
             //Not able to get CurrentLocation
@@ -183,9 +230,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             and add the C tags on the map and zoom the cameraView, so that the Tag is visible
                              */
                             for (int i = 0; i < arr.length; i += 3) {
+                                String tag_id=arr[i];
                                 LatLng location = new LatLng(Double.parseDouble(arr[i + 2]), Double.parseDouble(arr[i + 1]));
-                                mMap.addMarker(new MarkerOptions().position(location).title("here").draggable(true).icon(BitmapDescriptorFactory.fromBitmap(smallCIconMarker)));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 18));
+                                mMap.addMarker(new MarkerOptions().position(location).title(tag_id).draggable(true).icon(BitmapDescriptorFactory.fromBitmap(smallCIconMarker)));
+                               //  mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 18));
 
                             }
                         } else {
@@ -216,7 +264,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
         WebApiServer.getInstance(getApplicationContext()).addToQueue(myStringRequest);
 
-
+        mMap.setOnMarkerClickListener(this);
     }
 
     /*
@@ -283,7 +331,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-
     /*
     Re-size the corresponding image to the given height and width
     and return it.
@@ -294,6 +341,88 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Bitmap smallCurrentMarker = Bitmap.createScaledBitmap(b, width, height, false);
         return smallCurrentMarker;
     }
+/*
+Gets all the collected tags from the post request made to the server and displays it in a grid view.
+ */
+    public void getGallery(View view){
+        StringRequest myStringRequest = new StringRequest(Request.Method.POST, getResources().getString(R.string.web_api) + "getgallery.php",
+                new Response.Listener<String>() {
 
+                    @Override
+                    public void onResponse(String MyResponse) {
+                        Log.d("server resp_for_gallery", MyResponse);
+                        if(!MyResponse.isEmpty()){
+                            String[]list= MyResponse.split(",");
+
+                            Intent intent = new Intent(MapsActivity.this,GalleryView.class);
+                            ArrayList<String> stuff = new ArrayList<String>();
+                            for (int i = 0; i < list.length; i++) {
+                                stuff.add(list[i]);
+                            }
+
+                            intent.putStringArrayListExtra("list_of_urls", stuff);
+                            startActivity(intent);
+
+                        }
+                        else{
+                            Log.d("server resp_for_gallery", MyResponse);
+                            Toast.makeText(getApplicationContext(), "No Tags Collected by the User", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e("Response", String.valueOf(error));
+                Toast.makeText(getApplicationContext(), "Error getting a response from Server. Please try later", Toast.LENGTH_LONG).show();
+
+
+            }
+        }) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> param_map = new HashMap<>();
+                param_map.put("email", userEmailID);
+                Log.d("putting gallery", "done");
+                return param_map;
+            }
+        };
+        WebApiServer.getInstance(getApplicationContext()).addToQueue(myStringRequest);
+
+
+
+    }
+
+    /* This method call provides the necessary intent to the Place Screen and Collect screen*/
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        Log.d("MArker name",marker.getTitle());
+        if(marker.getTitle().equals(currentLocMarker.getTitle())){
+            Log.d("MArker name is Same",marker.getTitle());
+
+
+
+                Intent intent = new Intent(MapsActivity.this, PlaceScreenActivity.class);
+                intent.putExtra("latitude", String.valueOf(currentLocation.latitude));
+                intent.putExtra("longitude", String.valueOf(currentLocation.longitude));
+                intent.putExtra("email", userEmailID);
+                startActivity(intent);
+                Log.d("Intent has started",marker.getTitle());
+
+
+        }
+        else{
+            Log.d("MArker name is Not Same",marker.getTitle());
+            String tag_id=marker.getTitle();
+            Intent intent = new Intent(MapsActivity.this,CollectScreenActivity.class);
+            intent.putExtra("tagId",tag_id);
+            intent.putExtra("altitude",String.valueOf(altitude));
+            intent.putExtra("email", userEmailID);
+            startActivity(intent);
+
+
+
+        }
+        return false;
+    }
 
 }

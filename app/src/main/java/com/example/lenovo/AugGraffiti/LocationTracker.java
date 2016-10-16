@@ -43,6 +43,7 @@ public class LocationTracker extends Service {
     Location location; // location
     double latitude; // latitude
     double longitude; // longitude
+    double altitude;
 
     // The minimum distance to change Updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 30; // 30 meters
@@ -75,8 +76,10 @@ public class LocationTracker extends Service {
         //Whenever the user location changes, onLocationChanged method is called
         public void onLocationChanged(final Location location) {
             if (location != null) {
+
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
+                altitude=location.getAltitude();
                 //OnLocationChange method of LocationChangeListener is called
                 if (locationChangeListener != null) {
                     locationChangeListener.onLocationChange(latitude, longitude);
@@ -141,6 +144,7 @@ public class LocationTracker extends Service {
                         if (location != null) {
                             latitude = location.getLatitude();
                             longitude = location.getLongitude();
+                            altitude=location.getAltitude();
                             Log.d("Got LOCATION LATITFRmNW", String.valueOf(latitude));
                             Log.d("Got LOCATION LONGIFRmNW", String.valueOf(longitude));
                         }
@@ -163,6 +167,7 @@ public class LocationTracker extends Service {
                             if (location != null) {
                                 latitude = location.getLatitude();
                                 longitude = location.getLongitude();
+                                altitude=location.getAltitude();
                                 Log.d("Got LOCATION LATIT", String.valueOf(latitude));
                                 Log.d("Got LOCATION LONGI", String.valueOf(longitude));
                             }
@@ -199,6 +204,16 @@ public class LocationTracker extends Service {
         }
 
         return longitude;
+    }
+    /**
+     * Function to get altitude
+     */
+    public double getAltitude() {
+        if (location != null) {
+            altitude = location.getAltitude();
+        }
+
+        return latitude;
     }
 
     /**
